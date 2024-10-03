@@ -1,3 +1,4 @@
 .env
 node_modules
 malas-review-pr.pem
+app.log
