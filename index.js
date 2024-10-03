@@ -97,6 +97,21 @@ async function processPullRequest(owner, repo, pull_number, installationId) {
       +          isDisabled={!form.formState.isValid}
             >
       \`\`\`
+
+      2. In the file apps/features/service/components/service-form.tsx, in the handleSubmit section, change onSubmit to handleFormSubmit so the data can be updated or added according to the intended logic.
+      \`\`\`
+      - onPress={handleSubmit(onSubmit)}
+      + onPress={handleSubmit(handleFormSubmit)}
+      \`\`\`
+
+      3.Change in the file apps/package.json: Adding a more complete check for NODE_ENV in the start script.
+      \`\`\`
+      - "start:dev": "NODE_ENV=development && expo start",
+      - "start:prod": "NODE_ENV=production && expo start"
+      + "start:dev": "NODE_ENV=development expo start",
+      + "start:prod": "NODE_ENV=production expo start"
+      \`\`\`
+
     
       Focus only on the code that has been changed in this PR and avoid addressing issues related to imports or exports unless they are directly relevant to the logic changes. Your feedback should clearly explain what part of the code needs improvement and suggest an optimal solution.
     
