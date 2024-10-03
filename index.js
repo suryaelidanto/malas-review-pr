@@ -34,9 +34,9 @@ const logger = winston.createLogger({
   ],
 });
 
-app.get("/", (req,res) => {
-  res.send("Welcome to malas review PR! 🧢")
-})
+app.get("/", (req, res) => {
+  res.send("Welcome to malas review PR! 🧢");
+});
 
 // Webhook endpoint for GitHub to trigger PR reviews
 app.post("/webhook", async (req, res) => {
@@ -87,24 +87,21 @@ async function processPullRequest(owner, repo, pull_number, installationId) {
       .join("\n\n");
 
     const prompt = `
-      Review code changes berikut. Sarankan hingga maksimal lima perbaikan (dan gunakan penomoran pada setiap poin), langsung pada intinya, jelas, dan fokus singkat pada masalah penting seperti logika bisnis atau kesalahan ketik:
-      ${combinedChanges}
-
-      Dan bila berupa saran berkaitan dengan code tolong berikan juga diff nya, kode sebelumnya dan kode yang disarankan, contoh gambaran seperti ini yang bagus:
-
-      1. Perubahan pada file \`apps/components/category/form/category-form.tsx\`: Perlu menonaktifkan tombol Submit jika terdapat kesalahan pada form.
+      Please review the following code changes. Provide up to five focused, actionable suggestions (numbered) that clearly address issues such as business logic mistakes, typing errors, or other critical problems. Be direct, concise, and ensure the feedback highlights areas that need attention.
+    
+      Additionally, if your suggestions involve code changes, provide a diff between the current and suggested code, formatted as shown in the example below:
+    
+      1. In \`apps/components/category/form/category-form.tsx\`, you should disable the Submit button when the form contains errors.
       \`\`\`diff
             _text={{ fontWeight: 'bold', color: 'white' }}
       +          isDisabled={!form.formState.isValid}
             >
       \`\`\`
-
-      Cukup berikan saran pada kode yang diubah dari PR tersebut saja dan pastikan clear dalam menjelaskan bagian codenya, bila perlu sebutkan juga bagian code yang mana dan solusi yang ditawarkan code yang seperti apa.
-
-      Dan tolong, jangan cuma sekedar memberikan informasi saja, tapi betulan memberikan saran perubahan yang sebaiknya seperti apa.
-
-      Dan kalau bisa jangan urusi importing atau exporting yang sepertinya itu akan di pakai di file lain.
-      `;
+    
+      Focus only on the code that has been changed in this PR and avoid addressing issues related to imports or exports unless they are directly relevant to the logic changes. Your feedback should clearly explain what part of the code needs improvement and suggest an optimal solution.
+    
+      Please make sure that your suggestions go beyond simply pointing out what has changed, and instead provide clear guidance on how the code should be improved.
+    `;
 
     const analysis = await analyzeCode(prompt);
     if (!analysis || analysis.trim() === "") {
@@ -129,7 +126,7 @@ async function processPullRequest(owner, repo, pull_number, installationId) {
 // Function to initialize Octokit with the installation token
 async function initializeOctokit(installationId) {
   const appId = process.env.GITHUB_APP_ID;
-  const privateKey = process.env.GITHUB_APP_PRIVATE_KEY
+  const privateKey = process.env.GITHUB_APP_PRIVATE_KEY;
 
   const octokit = new Octokit({
     authStrategy: createAppAuth,
