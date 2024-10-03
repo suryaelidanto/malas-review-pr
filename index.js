@@ -125,10 +125,7 @@ async function processPullRequest(owner, repo, pull_number, installationId) {
 // Function to initialize Octokit with the installation token
 async function initializeOctokit(installationId) {
   const appId = process.env.GITHUB_APP_ID;
-  const privateKey = fs.readFileSync(
-    path.resolve("./malas-review-pr.pem"),
-    "utf8"
-  );
+  const privateKey = process.env.GITHUB_APP_PRIVATE_KEY
 
   const octokit = new Octokit({
     authStrategy: createAppAuth,
