@@ -34,6 +34,10 @@ const logger = winston.createLogger({
   ],
 });
 
+app.get("/", (req,res) => {
+  res.send("Welcome to malas review PR! 🧢")
+})
+
 // Webhook endpoint for GitHub to trigger PR reviews
 app.post("/webhook", async (req, res) => {
   const { action, pull_request, installation } = req.body;
@@ -112,7 +116,7 @@ async function processPullRequest(owner, repo, pull_number, installationId) {
       owner,
       repo,
       pull_number,
-      body: `🤖 Automated PR Review Suggestion:\n${analysis}`,
+      body: `🤖 Malas Review PR Suggestion:\n${analysis}`,
       event: "COMMENT",
     });
 
