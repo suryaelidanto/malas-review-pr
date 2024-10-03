@@ -113,9 +113,7 @@ async function processPullRequest(owner, repo, pull_number, installationId) {
       \`\`\`
 
     
-      Focus only on the code that has been changed in this PR and avoid addressing issues related to imports or exports unless they are directly relevant to the logic changes. Your feedback should clearly explain what part of the code needs improvement and suggest an optimal solution.
-    
-      Please make sure that your suggestions go beyond simply pointing out what has changed, and instead provide clear guidance on how the code should be improved.
+      Focus only on the code that has been changed in this PR and avoid addressing issues related to imports or exports unless they are directly relevant to the logic changes.
     `;
 
     const analysis = await analyzeCode(prompt);
