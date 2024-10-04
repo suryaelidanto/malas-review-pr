@@ -63,23 +63,20 @@ app.post("/webhook", async (req, res) => {
   res.sendStatus(200);
 });
 
-// Function to retrieve the content of package.json from the repo
-async function getPackageJsonContent(octokit, owner, repo) {
+// Function to retrieve the content of package manager files from the repo
+async function getPackageFileContent(octokit, owner, repo, filePath) {
   try {
     const { data: fileContent } = await octokit.repos.getContent({
       owner,
       repo,
-      path: "package.json",
+      path: filePath,
     });
 
     // Decode base64 content
-    const packageJsonContent = Buffer.from(
-      fileContent.content,
-      "base64"
-    ).toString("utf8");
-    return packageJsonContent;
+    const content = Buffer.from(fileContent.content, "base64").toString("utf8");
+    return content;
   } catch (error) {
-    logger.error(`Failed to retrieve package.json: ${error.message}`);
+    logger.error(`Failed to retrieve ${filePath}: ${error.message}`);
     return null;
   }
 }
@@ -104,15 +101,20 @@ async function processPullRequest(owner, repo, pull_number, installationId) {
       return;
     }
 
-    // Get package.json content
-    const packageJsonContent = await getPackageJsonContent(
-      octokit,
-      owner,
-      repo
-    );
+    // Define the list of possible package manager files
+    const packageFiles = ["package.json", "pom.xml", "build.gradle", "Cargo.toml"];
+    let packageFileContent = "";
 
-    if (!packageJsonContent) {
-      logger.warn(`No package.json found in ${owner}/${repo}.`);
+    for (const file of packageFiles) {
+      const content = await getPackageFileContent(octokit, owner, repo, file);
+      if (content) {
+        logger.info(`Found and retrieved ${file} in ${owner}/${repo}.`);
+        packageFileContent += `\n\n=== Content of ${file} ===\n${content}`;
+      }
+    }
+
+    if (!packageFileContent) {
+      logger.warn(`No package manager files found in ${owner}/${repo}.`);
     }
 
     // Combine the changes and focus only on the diff patches
@@ -126,7 +128,7 @@ async function processPullRequest(owner, repo, pull_number, installationId) {
       Review the following code changes and provide exactly **five** clear, actionable suggestions, numbered for clarity, focusing on the most important issues. Suggestions should be concise, sharp, and focus only on critical areas that will improve the code quality.
 
       Here's the code and context : 
-      - Project uses packages from this \`package.json\`: ${packageJsonContent}
+      - Project uses packages from these files: ${packageFileContent}
     
       Here are the diffs for the files that have been changed:
     
