@@ -4,8 +4,6 @@ import dotenv from "dotenv";
 import express from "express";
 import bodyParser from "body-parser";
 import analyzeCode from "./libs/openai.js";
-import fs from "fs";
-import path from "path";
 import winston from "winston";
 
 dotenv.config();
@@ -35,7 +33,7 @@ const logger = winston.createLogger({
 });
 
 app.get("/", (req, res) => {
-  res.send("Welcome to malas review PR! 🧢");
+  res.send("Welcome to Malas Review PR! 🧢");
 });
 
 // Webhook endpoint for GitHub to trigger PR reviews
@@ -47,7 +45,7 @@ app.post("/webhook", async (req, res) => {
     const owner = pull_request.head.repo.owner.login;
     const repo = pull_request.head.repo.name;
     const pull_number = pull_request.number;
-    const installationId = installation.id; // Retrieve the installation ID from the payload
+    const installationId = installation.id;
 
     logger.info(
       `Processing PR #${pull_number} in ${owner}/${repo} with installation ID ${installationId}`
@@ -72,11 +70,16 @@ async function getPackageFileContent(octokit, owner, repo, filePath) {
       path: filePath,
     });
 
-    // Decode base64 content
     const content = Buffer.from(fileContent.content, "base64").toString("utf8");
     return content;
   } catch (error) {
-    logger.error(`Failed to retrieve ${filePath}: ${error.message}`);
+    if (error.status === 403) {
+      logger.error(`Forbidden (403): Insufficient permissions to access ${filePath}`);
+    } else if (error.status === 404) {
+      logger.error(`File not found (404): ${filePath}`);
+    } else {
+      logger.error(`Failed to retrieve ${filePath}: ${error.message}`);
+    }
     return null;
   }
 }
@@ -90,21 +93,17 @@ async function processPullRequest(owner, repo, pull_number, installationId) {
     const octokit = await initializeOctokit(installationId);
 
     // Get only the changed files in the PR
-    const changedFiles = await getChangedFiles(
-      octokit,
-      owner,
-      repo,
-      pull_number
-    );
+    const changedFiles = await getChangedFiles(octokit, owner, repo, pull_number);
     if (changedFiles.length === 0) {
       logger.warn(`No file changes found in PR #${pull_number}.`);
       return;
     }
 
-    // Define the list of possible package manager files
+    // Define the list of package manager files
     const packageFiles = ["package.json", "pom.xml", "build.gradle", "Cargo.toml"];
     let packageFileContent = "";
 
+    // Check for each package file in the repo
     for (const file of packageFiles) {
       const content = await getPackageFileContent(octokit, owner, repo, file);
       if (content) {
@@ -122,18 +121,21 @@ async function processPullRequest(owner, repo, pull_number, installationId) {
       .map((file) => `File: ${file.filename}\nChanges:\n${file.patch}`)
       .join("\n\n");
 
+    // OpenAI prompt with instructions to not force changes to package files
     const prompt = `
-      Play the role of an expert developer. If it's a React project, imagine you're Dan Abramov reviewing this code; for Express, imagine you're Guillermo Rauch. Your role is to be highly opinionated and direct in providing feedback. You should prioritize highlighting critical issues, especially those related to performance, business logic errors, or potential bugs. Avoid being overly diplomatic—your goal is to improve the code as quickly as possible.
-    
-      Review the following code changes and provide exactly **five** clear, actionable suggestions, numbered for clarity, focusing on the most important issues. Suggestions should be concise, sharp, and focus only on critical areas that will improve the code quality.
+      Act as an expert developer. For React projects, you're Dan Abramov; for Express, you're Guillermo Rauch. Provide highly opinionated, critical feedback on the following code changes, focusing only on critical issues that affect performance, business logic, or potential bugs.
 
-      Here's the code and context : 
-      - Project uses packages from these files: ${packageFileContent}
-    
-      Here are the diffs for the files that have been changed:
-    
+      Important:
+      - Suggest improvements but **do not force changes to package files**; only recommend them if appropriate.
+      - Provide exactly **five** clear, actionable suggestions.
+      - Prioritize the most important issues, and focus on the files that were changed.
+
+      Here's the project context and package files: 
+      ${packageFileContent}
+
+      Here are the diffs for the changed files:
       ${combinedChanges}
-    
+
       Important:
       - Avoid commenting on imports/exports unless directly related to critical functionality.
       - Focus on addressing only business logic issues, potential bugs, or serious typing mistakes.
@@ -163,6 +165,7 @@ async function processPullRequest(owner, repo, pull_number, installationId) {
       return;
     }
 
+    // Post the review as a comment on the pull request
     await octokit.pulls.createReview({
       owner,
       repo,
@@ -187,14 +190,14 @@ async function initializeOctokit(installationId) {
     auth: {
       appId,
       privateKey,
-      installationId, // Dynamically use the installation ID from webhook
+      installationId,
     },
   });
 
   return octokit;
 }
 
-// Function to get changed files in a pull request
+// Function to get the changed files in a pull request
 async function getChangedFiles(octokit, owner, repo, pull_number) {
   const { data: files } = await octokit.pulls.listFiles({
     owner,
