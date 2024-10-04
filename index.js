@@ -72,7 +72,12 @@ async function processPullRequest(owner, repo, pull_number, installationId) {
     const octokit = await initializeOctokit(installationId);
 
     // Get only the changed files in the PR
-    const changedFiles = await getChangedFiles(octokit, owner, repo, pull_number);
+    const changedFiles = await getChangedFiles(
+      octokit,
+      owner,
+      repo,
+      pull_number
+    );
     if (changedFiles.length === 0) {
       logger.warn(`No file changes found in PR #${pull_number}.`);
       return;
@@ -84,40 +89,35 @@ async function processPullRequest(owner, repo, pull_number, installationId) {
       .join("\n\n");
 
     const prompt = `
-      Please review the following code changes. Provide up to five focused, actionable suggestions (numbered) that address business logic errors, typing mistakes, or other critical issues. Be direct, concise, and prioritize impactful feedback based only on the changes in this PR.
-
+      Play the role of an expert developer. If it's a React project, imagine you're Dan Abramov reviewing this code; for Express, imagine you're Guillermo Rauch. Your role is to be highly opinionated and direct in providing feedback. You should prioritize highlighting critical issues, especially those related to performance, business logic errors, or potential bugs. Avoid being overly diplomatic—your goal is to improve the code as quickly as possible.
+    
+      Review the following code changes and provide exactly **five** clear, actionable suggestions, numbered for clarity, focusing on the most important issues. Suggestions should be concise, sharp, and focus only on critical areas that will improve the code quality.
+    
       Here are the diffs for the files that have been changed:
-      
+    
       ${combinedChanges}
-      
+    
       Important:
-      - Focus only on the code changes shown in the diffs and avoid reviewing unrelated sections of the codebase.
-      - Avoid discussing imports or exports unless directly related to the changes.
-
-      Use this good format example so the review is clear and useful :
+      - Avoid commenting on imports/exports unless directly related to critical functionality.
+      - Focus on addressing only business logic issues, potential bugs, or serious typing mistakes.
+      - Be clear and opinionated, prioritize impact, and avoid discussing trivial matters.
+    
+      Example of sharp, impactful feedback:
       
-      1. In \`apps/components/category/form/category-form.tsx\`, you should disable the Submit button when the form contains errors.
+      1. In \`apps/components/category/form/category-form.tsx\`, you should disable the Submit button when the form contains errors. This is critical to prevent users from submitting invalid data.
       \`\`\`diff
             _text={{ fontWeight: 'bold', color: 'white' }}
       +          isDisabled={!form.formState.isValid}
             >
       \`\`\`
-
-      2. In the file apps/features/service/components/service-form.tsx, in the handleSubmit section, change onSubmit to handleFormSubmit so the data can be updated or added according to the intended logic.
-      \`\`\`
+    
+      2. In \`apps/features/service/components/service-form.tsx\`, the onSubmit handler should be renamed to handleFormSubmit to make it clearer that this function handles the form submission, ensuring the business logic is executed as expected.
+      \`\`\`diff
       - onPress={handleSubmit(onSubmit)}
       + onPress={handleSubmit(handleFormSubmit)}
       \`\`\`
-
-      3.Change in the file apps/package.json: Adding a more complete check for NODE_ENV in the start script.
-      \`\`\`
-      - "start:dev": "NODE_ENV=development && expo start",
-      - "start:prod": "NODE_ENV=production && expo start"
-      + "start:dev": "NODE_ENV=development expo start",
-      + "start:prod": "NODE_ENV=production expo start"
-      \`\`\`
-      
-      Provide your feedback in numbered points. If a code suggestion is needed, please provide a diff of the changes.
+    
+      Provide five suggestions following this structure, and prioritize only the most important feedback.
     `;
 
     const analysis = await analyzeCode(prompt);
