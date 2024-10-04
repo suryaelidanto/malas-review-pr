@@ -73,14 +73,16 @@ async function getPackageJsonContent(octokit, owner, repo) {
     });
 
     // Decode base64 content
-    const packageJsonContent = Buffer.from(fileContent.content, "base64").toString("utf8");
+    const packageJsonContent = Buffer.from(
+      fileContent.content,
+      "base64"
+    ).toString("utf8");
     return packageJsonContent;
   } catch (error) {
     logger.error(`Failed to retrieve package.json: ${error.message}`);
     return null;
   }
 }
-
 
 // Function to process pull request changes and analyze them
 async function processPullRequest(owner, repo, pull_number, installationId) {
@@ -91,7 +93,11 @@ async function processPullRequest(owner, repo, pull_number, installationId) {
     const octokit = await initializeOctokit(installationId);
 
     // Get package.json content
-    const packageJsonContent = await getPackageJsonContent(octokit, owner, repo);
+    const packageJsonContent = await getPackageJsonContent(
+      octokit,
+      owner,
+      repo
+    );
     if (!packageJsonContent) {
       logger.warn(`No package.json found in ${owner}/${repo}.`);
       return;
@@ -121,14 +127,30 @@ async function processPullRequest(owner, repo, pull_number, installationId) {
     - Project uses packages from this \`package.json\`: ${packageJsonContent}
     - Files and changes to review:
 
-    ${combinedChanges}
+      ${combinedChanges}
 
-    Guidelines:
-    - Provide 5 actionable, high-impact suggestions.
-    - Prioritize serious problems over minor improvements.
-    - Focus on business logic, performance, and typing errors.
-    - Avoid trivial details like imports unless they're crucial to functionality.
-    - Multiple line changes are allowed—fix the logic holistically where needed.
+      Use this good format example so the review is clear and useful :
+      
+      1. In \`apps/components/category/form/category-form.tsx\`, you should disable the Submit button when the form contains errors.
+      \`\`\`diff
+            _text={{ fontWeight: 'bold', color: 'white' }}
+      +          isDisabled={!form.formState.isValid}
+            >
+      \`\`\`
+
+      2. In the file apps/features/service/components/service-form.tsx, in the handleSubmit section, change onSubmit to handleFormSubmit so the data can be updated or added according to the intended logic.
+      \`\`\`
+      - onPress={handleSubmit(onSubmit)}
+      + onPress={handleSubmit(handleFormSubmit)}
+      \`\`\`
+
+      3.Change in the file apps/package.json: Adding a more complete check for NODE_ENV in the start script.
+      \`\`\`
+      - "start:dev": "NODE_ENV=development && expo start",
+      - "start:prod": "NODE_ENV=production && expo start"
+      + "start:dev": "NODE_ENV=development expo start",
+      + "start:prod": "NODE_ENV=production expo start"
+      \`\`\`
     `;
 
     const analysis = await analyzeCode(prompt);
