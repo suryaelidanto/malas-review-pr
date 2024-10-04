@@ -63,27 +63,6 @@ app.post("/webhook", async (req, res) => {
   res.sendStatus(200);
 });
 
-// Function to retrieve the content of package.json from the repo
-async function getPackageJsonContent(octokit, owner, repo) {
-  try {
-    const { data: fileContent } = await octokit.repos.getContent({
-      owner,
-      repo,
-      path: "package.json",
-    });
-
-    // Decode base64 content
-    const packageJsonContent = Buffer.from(
-      fileContent.content,
-      "base64"
-    ).toString("utf8");
-    return packageJsonContent;
-  } catch (error) {
-    logger.error(`Failed to retrieve package.json: ${error.message}`);
-    return null;
-  }
-}
-
 // Function to process pull request changes and analyze them
 async function processPullRequest(owner, repo, pull_number, installationId) {
   try {
@@ -91,17 +70,6 @@ async function processPullRequest(owner, repo, pull_number, installationId) {
       `Processing PR #${pull_number} in ${owner}/${repo} with installation ID ${installationId}...`
     );
     const octokit = await initializeOctokit(installationId);
-
-    // Get package.json content
-    const packageJsonContent = await getPackageJsonContent(
-      octokit,
-      owner,
-      repo
-    );
-    if (!packageJsonContent) {
-      logger.warn(`No package.json found in ${owner}/${repo}.`);
-      return;
-    }
 
     // Get only the changed files in the PR
     const changedFiles = await getChangedFiles(
@@ -121,36 +89,35 @@ async function processPullRequest(owner, repo, pull_number, installationId) {
       .join("\n\n");
 
     const prompt = `
-    Play the role of an expert developer. For React projects, channel Dan Abramov, and for Express.js projects, think like Guillermo Rauch. Be direct, opinionated, and focused. Your priority is to address critical business logic errors, performance issues, or potential bugs. No politeness—just actionable improvements.
-
-    Here's the code and context:
-    - Project uses packages from this \`package.json\`: ${packageJsonContent}
-    - Files and changes to review:
-
+      Play the role of an expert developer. If it's a React project, imagine you're Dan Abramov reviewing this code; for Express, imagine you're Guillermo Rauch. Your role is to be highly opinionated and direct in providing feedback. You should prioritize highlighting critical issues, especially those related to performance, business logic errors, or potential bugs. Avoid being overly diplomatic—your goal is to improve the code as quickly as possible.
+    
+      Review the following code changes and provide exactly **five** clear, actionable suggestions, numbered for clarity, focusing on the most important issues. Suggestions should be concise, sharp, and focus only on critical areas that will improve the code quality.
+    
+      Here are the diffs for the files that have been changed:
+    
       ${combinedChanges}
-
-      Use this good format example so the review is clear and useful :
+    
+      Important:
+      - Avoid commenting on imports/exports unless directly related to critical functionality.
+      - Focus on addressing only business logic issues, potential bugs, or serious typing mistakes.
+      - Be clear and opinionated, prioritize impact, and avoid discussing trivial matters.
+    
+      Example of sharp, impactful feedback:
       
-      1. In \`apps/components/category/form/category-form.tsx\`, you should disable the Submit button when the form contains errors.
+      1. In \`apps/components/category/form/category-form.tsx\`, you should disable the Submit button when the form contains errors. This is critical to prevent users from submitting invalid data.
       \`\`\`diff
             _text={{ fontWeight: 'bold', color: 'white' }}
       +          isDisabled={!form.formState.isValid}
             >
       \`\`\`
-
-      2. In the file apps/features/service/components/service-form.tsx, in the handleSubmit section, change onSubmit to handleFormSubmit so the data can be updated or added according to the intended logic.
-      \`\`\`
+    
+      2. In \`apps/features/service/components/service-form.tsx\`, the onSubmit handler should be renamed to handleFormSubmit to make it clearer that this function handles the form submission, ensuring the business logic is executed as expected.
+      \`\`\`diff
       - onPress={handleSubmit(onSubmit)}
       + onPress={handleSubmit(handleFormSubmit)}
       \`\`\`
-
-      3.Change in the file apps/package.json: Adding a more complete check for NODE_ENV in the start script.
-      \`\`\`
-      - "start:dev": "NODE_ENV=development && expo start",
-      - "start:prod": "NODE_ENV=production && expo start"
-      + "start:dev": "NODE_ENV=development expo start",
-      + "start:prod": "NODE_ENV=production expo start"
-      \`\`\`
+    
+      Provide five suggestions following this structure, and prioritize only the most important feedback.
     `;
 
     const analysis = await analyzeCode(prompt);
