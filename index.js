@@ -63,6 +63,27 @@ app.post("/webhook", async (req, res) => {
   res.sendStatus(200);
 });
 
+// Function to retrieve the content of package.json from the repo
+async function getPackageJsonContent(octokit, owner, repo) {
+  try {
+    const { data: fileContent } = await octokit.repos.getContent({
+      owner,
+      repo,
+      path: "package.json",
+    });
+
+    // Decode base64 content
+    const packageJsonContent = Buffer.from(
+      fileContent.content,
+      "base64"
+    ).toString("utf8");
+    return packageJsonContent;
+  } catch (error) {
+    logger.error(`Failed to retrieve package.json: ${error.message}`);
+    return null;
+  }
+}
+
 // Function to process pull request changes and analyze them
 async function processPullRequest(owner, repo, pull_number, installationId) {
   try {
@@ -83,6 +104,17 @@ async function processPullRequest(owner, repo, pull_number, installationId) {
       return;
     }
 
+    // Get package.json content
+    const packageJsonContent = await getPackageJsonContent(
+      octokit,
+      owner,
+      repo
+    );
+
+    if (!packageJsonContent) {
+      logger.warn(`No package.json found in ${owner}/${repo}.`);
+    }
+
     // Combine the changes and focus only on the diff patches
     const combinedChanges = changedFiles
       .map((file) => `File: ${file.filename}\nChanges:\n${file.patch}`)
@@ -92,6 +124,9 @@ async function processPullRequest(owner, repo, pull_number, installationId) {
       Play the role of an expert developer. If it's a React project, imagine you're Dan Abramov reviewing this code; for Express, imagine you're Guillermo Rauch. Your role is to be highly opinionated and direct in providing feedback. You should prioritize highlighting critical issues, especially those related to performance, business logic errors, or potential bugs. Avoid being overly diplomatic—your goal is to improve the code as quickly as possible.
     
       Review the following code changes and provide exactly **five** clear, actionable suggestions, numbered for clarity, focusing on the most important issues. Suggestions should be concise, sharp, and focus only on critical areas that will improve the code quality.
+
+      Here's the code and context : 
+      - Project uses packages from this \`package.json\`: ${packageJsonContent}
     
       Here are the diffs for the files that have been changed:
     
