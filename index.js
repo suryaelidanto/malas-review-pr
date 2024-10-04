@@ -93,6 +93,29 @@ async function processPullRequest(owner, repo, pull_number, installationId) {
       Important:
       - Focus only on the code changes shown in the diffs and avoid reviewing unrelated sections of the codebase.
       - Avoid discussing imports or exports unless directly related to the changes.
+
+      Use this good format example so the review is clear and useful :
+      
+      1. In \`apps/components/category/form/category-form.tsx\`, you should disable the Submit button when the form contains errors.
+      \`\`\`diff
+            _text={{ fontWeight: 'bold', color: 'white' }}
+      +          isDisabled={!form.formState.isValid}
+            >
+      \`\`\`
+
+      2. In the file apps/features/service/components/service-form.tsx, in the handleSubmit section, change onSubmit to handleFormSubmit so the data can be updated or added according to the intended logic.
+      \`\`\`
+      - onPress={handleSubmit(onSubmit)}
+      + onPress={handleSubmit(handleFormSubmit)}
+      \`\`\`
+
+      3.Change in the file apps/package.json: Adding a more complete check for NODE_ENV in the start script.
+      \`\`\`
+      - "start:dev": "NODE_ENV=development && expo start",
+      - "start:prod": "NODE_ENV=production && expo start"
+      + "start:dev": "NODE_ENV=development expo start",
+      + "start:prod": "NODE_ENV=production expo start"
+      \`\`\`
       
       Provide your feedback in numbered points. If a code suggestion is needed, please provide a diff of the changes.
     `;
