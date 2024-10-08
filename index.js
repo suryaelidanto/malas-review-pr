@@ -74,7 +74,9 @@ async function getPackageFileContent(octokit, owner, repo, filePath) {
     return content;
   } catch (error) {
     if (error.status === 403) {
-      logger.error(`Forbidden (403): Insufficient permissions to access ${filePath}`);
+      logger.error(
+        `Forbidden (403): Insufficient permissions to access ${filePath}`
+      );
     } else if (error.status === 404) {
       logger.error(`File not found (404): ${filePath}`);
     } else {
@@ -93,14 +95,24 @@ async function processPullRequest(owner, repo, pull_number, installationId) {
     const octokit = await initializeOctokit(installationId);
 
     // Get only the changed files in the PR
-    const changedFiles = await getChangedFiles(octokit, owner, repo, pull_number);
+    const changedFiles = await getChangedFiles(
+      octokit,
+      owner,
+      repo,
+      pull_number
+    );
     if (changedFiles.length === 0) {
       logger.warn(`No file changes found in PR #${pull_number}.`);
       return;
     }
 
     // Define the list of package manager files
-    const packageFiles = ["package.json", "pom.xml", "build.gradle", "Cargo.toml"];
+    const packageFiles = [
+      "package.json",
+      "pom.xml",
+      "build.gradle",
+      "Cargo.toml",
+    ];
     let packageFileContent = "";
 
     // Check for each package file in the repo
@@ -143,19 +155,94 @@ async function processPullRequest(owner, repo, pull_number, installationId) {
     
       Example of sharp, impactful feedback:
       
-      1. In \`apps/components/category/form/category-form.tsx\`, you should disable the Submit button when the form contains errors. This is critical to prevent users from submitting invalid data.
-      \`\`\`diff
-            _text={{ fontWeight: 'bold', color: 'white' }}
-      +          isDisabled={!form.formState.isValid}
-            >
-      \`\`\`
-    
-      2. In \`apps/features/service/components/service-form.tsx\`, the onSubmit handler should be renamed to handleFormSubmit to make it clearer that this function handles the form submission, ensuring the business logic is executed as expected.
-      \`\`\`diff
-      - onPress={handleSubmit(onSubmit)}
-      + onPress={handleSubmit(handleFormSubmit)}
-      \`\`\`
-    
+     
+1. Disable button when form contains errors
+   File: \`apps/components/category/form/category\`-form.tsx
+   Perbaikan: Nonaktifkan tombol Submit ketika form memiliki error.
+   \`\`\`diff
+         _text={{ fontWeight: 'bold', color: 'white' }}
+   +         isDisabled={!form.formState.isValid}
+         >
+   \`\`\`
+
+2. Rename onSubmit handler for clarity
+   File: \`apps/features/service/components/service\`-form.tsx
+   Perbaikan: Ubah nama onSubmit menjadi handleFormSubmit untuk meningkatkan kejelasan bahwa fungsi ini menangani form submission.
+   \`\`\`diff
+   -    onPress={handleSubmit(onSubmit)}
+   +    onPress={handleSubmit(handleFormSubmit)}
+   \`\`\`
+
+3. Add missing error handling in fetch function
+   File: \`apps/utils/api/fetchData.ts\`
+   Perbaikan: Tambahkan penanganan error dalam fungsi fetch untuk menghindari crash jika request gagal.
+   \`\`\`diff
+   -    const response = await fetch(url);
+   +    const response = await fetch(url).catch(error => {
+   +        console.error('Error fetching data:', error);
+   +        return null;
+   +    });
+   \`\`\`
+
+4. Improve conditional rendering for loading state
+   File: \`apps/components/loading/LoadingSpinner.tsx\`
+   Perbaikan: Tambahkan pengecekan isLoading agar komponen hanya dirender ketika status loading benar.
+   \`\`\`diff
+   -    return <Spinner />;
+   +    return isLoading ? <Spinner /> : null;
+   \`\`\`
+
+5. Optimize useEffect dependency array
+   File: \`apps/features/user/components/UserProfile\`.tsx
+   Perbaikan: Kurangi dependensi useEffect agar hanya dijalankan ketika userId berubah.
+   \`\`\`diff
+   -    useEffect(() => { fetchUserData(); }, [userId, fetchUserData]);
+   +    useEffect(() => { fetchUserData(); }, [userId]);
+   \`\`\`
+
+6. Change let to const for variable declaration
+   File: \`apps/utils/helpers/formatDate.ts\`
+   Perbaikan: Ganti let dengan const untuk deklarasi variabel yang tidak diubah.
+   \`\`\`diff
+   -    let formattedDate = new Date(date).toLocaleDateString();
+   +    const formattedDate = new Date(date).toLocaleDateString();
+   \`\`\`
+
+7. Move inline styles to StyleSheet for performance
+   File: \`apps/components/button/SubmitButton.tsx\`
+   Perbaikan: Pindahkan style inline ke StyleSheet untuk meningkatkan performa dan keterbacaan kode.
+   \`\`\`diff
+   -    <Button style={{ backgroundColor: 'blue', padding: 10 }}>
+   +    const styles = StyleSheet.create({ button: { backgroundColor: 'blue', padding: 10 } });
+   +    <Button style={styles.button}>
+   \`\`\`
+
+8. Use optional chaining to prevent undefined error
+   File: \`apps/components/user/UserDetail.tsx\`
+   Perbaikan: Gunakan optional chaining untuk menghindari error jika objek undefined.
+   \`\`\`diff
+   -    const username = user.profile.name;
+   +    const username = user?.profile?.name;
+   \`\`\`
+
+9. Refactor duplicated logic into a helper function
+   File: \`apps/features/invoice/components/InvoiceItem\`.tsx
+   Perbaikan: Refactor logika duplikat menjadi fungsi helper untuk mengurangi pengulangan kode.
+   \`\`\`diff
+   -    const tax = item.price * 0.1;
+   -    const total = item.price + tax;
+   +    const calculateTotal = (price) => price + (price * 0.1);
+   +    const total = calculateTotal(item.price);
+   \`\`\`
+
+10. Avoid directly mutating state in setState
+    File: \`apps/features/cart/components/CartItem\`.tsx
+    Perbaikan: Hindari memutasi state secara langsung, gunakan spread operator untuk update state.
+    \`\`\`diff
+    -    setItems(currentItems => currentItems.push(newItem));
+    +    setItems(currentItems => [...currentItems, newItem]);
+    \`\`\`
+      
       Provide five suggestions following this structure, and prioritize only the most important feedback.
     `;
 
